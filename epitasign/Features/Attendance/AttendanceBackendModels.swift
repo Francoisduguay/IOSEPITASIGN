@@ -43,7 +43,7 @@ protocol AttendanceServicing {
 
 enum AttendanceBackendError: LocalizedError {
     case invalidSignature
-    case missingFirebaseSDK
+    case missingSupabaseSDK
     case missingNFC
     case malformedServerResponse
 
@@ -51,12 +51,12 @@ enum AttendanceBackendError: LocalizedError {
         switch self {
         case .invalidSignature:
             "La signature ne respecte pas les regles minimales."
-        case .missingFirebaseSDK:
-            "Firebase SDK n'est pas encore ajoute au projet Xcode."
+        case .missingSupabaseSDK:
+            "Supabase SDK n'est pas encore ajoute au projet Xcode."
         case .missingNFC:
             "CoreNFC n'est pas disponible sur cet appareil ou ce simulateur."
         case .malformedServerResponse:
-            "La reponse du serveur Firebase est invalide."
+            "La reponse du serveur Supabase est invalide."
         }
     }
 }
