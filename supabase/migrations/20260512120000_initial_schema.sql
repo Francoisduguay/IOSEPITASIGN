@@ -3,7 +3,7 @@ create extension if not exists pgcrypto;
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
-  role text not null default 'student' check (role in ('student', 'teacher', 'admin')),
+  role text not null default 'student' check (role in ('student', 'teacher')),
   first_name text,
   last_name text,
   created_at timestamptz not null default now()
@@ -57,7 +57,7 @@ alter table public.courses enable row level security;
 alter table public.attendance_tokens enable row level security;
 alter table public.attendance_records enable row level security;
 
-create or replace function public.is_teacher_or_admin()
+create or replace function public.is_teacher()
 returns boolean
 language sql
 security definer
@@ -67,21 +67,7 @@ as $$
     select 1
     from public.profiles
     where id = auth.uid()
-      and role in ('teacher', 'admin')
-  );
-$$;
-
-create or replace function public.is_admin()
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.profiles
-    where id = auth.uid()
-      and role = 'admin'
+      and role = 'teacher'
   );
 $$;
 
@@ -93,36 +79,7 @@ begin
   ) then
     create policy "profiles self read"
     on public.profiles for select
-    using (id = auth.uid() or public.is_teacher_or_admin());
-  end if;
-
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'profiles' and policyname = 'profiles admin write'
-  ) then
-    create policy "profiles admin write"
-    on public.profiles for all
-    using (public.is_admin())
-    with check (public.is_admin());
-  end if;
-
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'student_cards' and policyname = 'student cards admin read'
-  ) then
-    create policy "student cards admin read"
-    on public.student_cards for select
-    using (public.is_admin());
-  end if;
-
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'student_cards' and policyname = 'student cards admin write'
-  ) then
-    create policy "student cards admin write"
-    on public.student_cards for all
-    using (public.is_admin())
-    with check (public.is_admin());
+    using (id = auth.uid() or public.is_teacher());
   end if;
 
   if not exists (
@@ -140,17 +97,17 @@ begin
   ) then
     create policy "courses teacher write"
     on public.courses for all
-    using (public.is_teacher_or_admin())
-    with check (public.is_teacher_or_admin());
+    using (public.is_teacher())
+    with check (public.is_teacher());
   end if;
 
   if not exists (
     select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'attendance_records' and policyname = 'attendance records owner or staff read'
+    where schemaname = 'public' and tablename = 'attendance_records' and policyname = 'attendance records owner or teacher read'
   ) then
-    create policy "attendance records owner or staff read"
+    create policy "attendance records owner or teacher read"
     on public.attendance_records for select
-    using (user_id = auth.uid() or public.is_teacher_or_admin());
+    using (user_id = auth.uid() or public.is_teacher());
   end if;
 
   if not exists (

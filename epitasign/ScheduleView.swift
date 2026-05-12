@@ -44,7 +44,7 @@ struct ScheduleView: View {
                             Button {
                                 selectedCourse = course
                             } label: {
-                                CourseRow(course: course, showsDay: selectedScope == .week)
+                                CourseRow(course: course, showsStatus: user?.role != .teacher)
                             }
                             .buttonStyle(.plain)
                         }
@@ -56,8 +56,12 @@ struct ScheduleView: View {
             await loadCourses()
         }
         .sheet(item: $selectedCourse) { course in
-            if user?.role.canManageAttendance == true {
-                TeacherAttendanceView(course: course)
+            if user?.role.canSignStudents == true {
+                if course.status == .current {
+                    TeacherAttendanceView(course: course)
+                } else {
+                    TeacherCourseDetailView(course: course)
+                }
             } else {
                 CourseDetailView(course: course)
             }
@@ -225,18 +229,20 @@ enum ScheduleScope: String, CaseIterable, Identifiable {
 
 struct CourseRow: View {
     let course: Course
-    let showsDay: Bool
+    let showsStatus: Bool
 
     var body: some View {
         HStack(spacing: 14) {
-            VStack(spacing: 3) {
+            VStack(spacing: showsStatus ? 3 : 0) {
                 Text(course.time)
                     .font(.headline.monospacedDigit())
-                Text(course.status.shortLabel)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(course.status.color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                if showsStatus {
+                    Text(course.status.shortLabel)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(course.status.color)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
             }
             .frame(width: 76)
 
@@ -244,9 +250,6 @@ struct CourseRow: View {
                 Text(course.title)
                     .font(.headline)
                 HStack(spacing: 8) {
-                    if showsDay {
-                        Label(course.day, systemImage: "calendar")
-                    }
                     Label(course.room, systemImage: "mappin.and.ellipse")
                 }
                 .font(.caption)
@@ -255,9 +258,11 @@ struct CourseRow: View {
 
             Spacer()
 
-            Image(systemName: course.status.icon)
-                .font(.title3)
-                .foregroundStyle(course.status.color)
+            if showsStatus {
+                Image(systemName: course.status.icon)
+                    .font(.title3)
+                    .foregroundStyle(course.status.color)
+            }
         }
         .padding(14)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
@@ -270,8 +275,27 @@ struct CourseDetailView: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 14) {
-                CourseRow(course: course, showsDay: true)
+                CourseRow(course: course, showsStatus: true)
                 Text("Ce cours est disponible dans ton emploi du temps.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle(course.title)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+struct TeacherCourseDetailView: View {
+    let course: Course
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 14) {
+                CourseRow(course: course, showsStatus: false)
+                Text("Les signatures sont disponibles uniquement pendant le cours en cours.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -286,27 +310,27 @@ struct CourseDetailView: View {
 struct TeacherAttendanceView: View {
     let course: Course
     @State private var students = [
-        StudentAttendance(id: "1", name: "Nadir Koudri", status: .present),
-        StudentAttendance(id: "2", name: "Sarah Martin", status: .absent),
-        StudentAttendance(id: "3", name: "Yanis Benali", status: .present),
-        StudentAttendance(id: "4", name: "Lea Bernard", status: .absent)
+        StudentAttendance(id: "1", name: "Nadir Koudri", status: .signed),
+        StudentAttendance(id: "2", name: "Sarah Martin", status: .pending),
+        StudentAttendance(id: "3", name: "Yanis Benali", status: .signed),
+        StudentAttendance(id: "4", name: "Lea Bernard", status: .pending)
     ]
     @State private var signingStudent: StudentAttendance?
 
-    private var presentCount: Int {
-        students.filter { $0.status == .present }.count
+    private var signedCount: Int {
+        students.filter { $0.status == .signed }.count
     }
 
-    private var absentCount: Int {
-        students.filter { $0.status == .absent }.count
+    private var pendingCount: Int {
+        students.filter { $0.status == .pending }.count
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 14) {
                 HStack(spacing: 10) {
-                    AttendanceCountCard(title: "Presents", count: presentCount, color: .green)
-                    AttendanceCountCard(title: "Absents", count: absentCount, color: .red)
+                    AttendanceCountCard(title: "Signes", count: signedCount, color: .green)
+                    AttendanceCountCard(title: "A signer", count: pendingCount, color: .orange)
                 }
 
                 ForEach($students) { $student in
@@ -315,7 +339,7 @@ struct TeacherAttendanceView: View {
                             .fill(student.status.color.opacity(0.16))
                             .frame(width: 38, height: 38)
                             .overlay {
-                                Image(systemName: student.status == .present ? "checkmark" : "xmark")
+                                Image(systemName: student.status.icon)
                                     .font(.caption.weight(.bold))
                                     .foregroundStyle(student.status.color)
                             }
@@ -330,11 +354,19 @@ struct TeacherAttendanceView: View {
 
                         Spacer()
 
-                        if student.status == .absent {
+                        if student.status == .pending {
                             Button {
                                 signingStudent = student
                             } label: {
                                 Text("Faire signer")
+                                    .font(.caption.weight(.bold))
+                            }
+                            .buttonStyle(.bordered)
+                        } else {
+                            Button(role: .destructive) {
+                                markPending(studentId: student.id)
+                            } label: {
+                                Text("Defaire")
                                     .font(.caption.weight(.bold))
                             }
                             .buttonStyle(.bordered)
@@ -359,7 +391,12 @@ struct TeacherAttendanceView: View {
 
     private func markPresent(studentId: String) {
         guard let index = students.firstIndex(where: { $0.id == studentId }) else { return }
-        students[index].status = .present
+        students[index].status = .signed
+    }
+
+    private func markPending(studentId: String) {
+        guard let index = students.firstIndex(where: { $0.id == studentId }) else { return }
+        students[index].status = .pending
     }
 }
 

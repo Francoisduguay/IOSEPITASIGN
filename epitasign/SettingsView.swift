@@ -45,7 +45,7 @@ struct ProfileHeader: View {
     var body: some View {
         HStack(spacing: 14) {
             Circle()
-                .fill(Color.blue.gradient)
+                .fill(Color.appBlue.gradient)
                 .frame(width: 56, height: 56)
                 .overlay {
                     Text(initials)
@@ -95,8 +95,8 @@ struct SettingToggle: View {
             Image(systemName: icon)
                 .font(.headline)
                 .frame(width: 42, height: 42)
-                .background(Color.blue.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
-                .foregroundStyle(.blue)
+                .background(Color.appBlue.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
+                .foregroundStyle(.appBlue)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)

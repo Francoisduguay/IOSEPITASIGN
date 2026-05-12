@@ -230,24 +230,31 @@ struct AttendanceRecord: Identifiable {
 struct StudentAttendance: Identifiable {
     let id: String
     let name: String
-    var status: StudentPresenceStatus
+    var status: StudentSignatureStatus
 }
 
-enum StudentPresenceStatus {
-    case present
-    case absent
+enum StudentSignatureStatus {
+    case signed
+    case pending
 
     var label: String {
         switch self {
-        case .present: "Present"
-        case .absent: "Absent"
+        case .signed: "Signe"
+        case .pending: "A signer"
         }
     }
 
     var color: Color {
         switch self {
-        case .present: .green
-        case .absent: .red
+        case .signed: .green
+        case .pending: .orange
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .signed: "checkmark"
+        case .pending: "signature"
         }
     }
 }
@@ -257,7 +264,7 @@ struct PagerItem {
     let icon: String
 }
 
-enum AttendanceStatus {
+enum AttendanceStatus: Equatable {
     case signed
     case current
     case upcoming

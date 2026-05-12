@@ -79,12 +79,11 @@ struct epitasignTests {
     }
 
     @Test func userRoleIsInferredFromEmailForDemoAccounts() {
-        #expect(UserRole.inferred(from: "admin@epita.fr") == .admin)
+        #expect(UserRole.inferred(from: "direction@epita.fr") == .student)
         #expect(UserRole.inferred(from: "prof.maths@epita.fr") == .teacher)
         #expect(UserRole.inferred(from: "prenom.nom@epita.fr") == .student)
-        #expect(UserRole.admin.canManageAttendance)
-        #expect(UserRole.teacher.canManageAttendance)
-        #expect(UserRole.student.canManageAttendance == false)
+        #expect(UserRole.teacher.canSignStudents)
+        #expect(UserRole.student.canSignStudents == false)
     }
 
     @Test func courseStatusResolverUsesCurrentTime() {

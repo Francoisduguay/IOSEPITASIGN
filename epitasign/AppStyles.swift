@@ -6,18 +6,36 @@
 import SwiftUI
 import UIKit
 
+extension Color {
+    static let appBlue = Color(
+        UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.10, green: 0.32, blue: 0.68, alpha: 1)
+                : UIColor.systemBlue
+        }
+    )
+}
+
 struct AppBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         LinearGradient(
             colors: [
                 Color(.systemBackground),
-                Color.blue.opacity(0.08),
-                Color.green.opacity(0.06)
+                blueAccent,
+                Color.green.opacity(colorScheme == .dark ? 0.08 : 0.06)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         .ignoresSafeArea()
+    }
+
+    private var blueAccent: Color {
+        colorScheme == .dark
+            ? Color(red: 0.03, green: 0.12, blue: 0.26).opacity(0.72)
+            : Color.appBlue.opacity(0.08)
     }
 }
 

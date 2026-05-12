@@ -6,10 +6,14 @@
 import SwiftUI
 
 struct MainShellView: View {
-    @State private var selectedPage = 1
+    @State private var selectedPage = 0
     @State private var flowState: AttendanceFlowState = .ready
     let user: AuthUser?
     let onLogout: () -> Void
+
+    private var isTeacher: Bool {
+        user?.role == .teacher
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -19,18 +23,26 @@ struct MainShellView: View {
                 ScheduleView(user: user)
                     .tag(0)
 
-                SignView(flowState: $flowState)
-                    .tag(1)
+                if isTeacher {
+                    SettingsView(user: user, onLogout: onLogout)
+                        .tag(1)
+                } else {
+                    SignView(flowState: $flowState)
+                        .tag(1)
 
-                HistoryView()
-                    .tag(2)
+                    HistoryView()
+                        .tag(2)
 
-                SettingsView(user: user, onLogout: onLogout)
-                    .tag(3)
+                    SettingsView(user: user, onLogout: onLogout)
+                        .tag(3)
+                }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .onChange(of: isTeacher) { _ in
+                selectedPage = 0
+            }
 
-            BottomPager(selectedPage: $selectedPage, flowState: flowState)
+            BottomPager(selectedPage: $selectedPage, flowState: flowState, isTeacher: isTeacher)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 10)
         }
@@ -40,13 +52,23 @@ struct MainShellView: View {
 struct BottomPager: View {
     @Binding var selectedPage: Int
     let flowState: AttendanceFlowState
+    let isTeacher: Bool
 
-    private let items = [
-        PagerItem(title: "Cours", icon: "calendar"),
-        PagerItem(title: "Signer", icon: "signature"),
-        PagerItem(title: "Historique", icon: "clock.arrow.circlepath"),
-        PagerItem(title: "Parametres", icon: "gearshape.fill")
-    ]
+    private var items: [PagerItem] {
+        if isTeacher {
+            return [
+                PagerItem(title: "Cours", icon: "calendar"),
+                PagerItem(title: "Parametres", icon: "gearshape.fill")
+            ]
+        }
+
+        return [
+            PagerItem(title: "Cours", icon: "calendar"),
+            PagerItem(title: "Signer", icon: "signature"),
+            PagerItem(title: "Historique", icon: "clock.arrow.circlepath"),
+            PagerItem(title: "Parametres", icon: "gearshape.fill")
+        ]
+    }
 
     var body: some View {
         HStack(spacing: 6) {
@@ -77,6 +99,6 @@ struct BottomPager: View {
     }
 
     private func activeColor(_ index: Int) -> Color {
-        index == 1 ? flowState.statusColor : .blue
+        !isTeacher && index == 1 ? flowState.statusColor : .appBlue
     }
 }
