@@ -6,9 +6,11 @@
 import SwiftUI
 
 struct LoginView: View {
+    @EnvironmentObject private var environment: AppEnvironment
     @State private var email = ""
     @State private var password = ""
-    @State private var showDomainError = false
+    @State private var errorMessage: String?
+    @State private var isWorking = false
     let onLogin: () -> Void
 
     var body: some View {
@@ -38,8 +40,8 @@ struct LoginView: View {
                         .frame(height: 54)
                         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
 
-                    if showDomainError {
-                        Label("Utilise une adresse EPITA valide.", systemImage: "exclamationmark.triangle.fill")
+                    if let errorMessage {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(.orange)
                     }
@@ -48,24 +50,39 @@ struct LoginView: View {
                 Spacer()
 
                 Button {
-                    if email.lowercased().hasSuffix("@epita.fr") || email.isEmpty {
-                        showDomainError = false
-                        haptic(.success)
-                        onLogin()
-                    } else {
-                        showDomainError = true
-                        haptic(.warning)
-                    }
+                    signIn()
                 } label: {
-                    Label("Continuer", systemImage: "arrow.right.circle.fill")
+                    Label(isWorking ? "Connexion" : "Continuer", systemImage: "arrow.right.circle.fill")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .frame(height: 58)
                 }
                 .buttonStyle(PrimaryButtonStyle(tint: .blue))
+                .disabled(isWorking)
+                .opacity(isWorking ? 0.65 : 1)
                 .padding(.bottom, 18)
             }
             .padding(22)
+        }
+    }
+
+    private func signIn() {
+        guard !isWorking else { return }
+
+        Task {
+            isWorking = true
+            errorMessage = nil
+
+            do {
+                _ = try await environment.authService.signIn(email: email, password: password)
+                haptic(.success)
+                onLogin()
+            } catch {
+                errorMessage = error.localizedDescription
+                haptic(.warning)
+            }
+
+            isWorking = false
         }
     }
 }

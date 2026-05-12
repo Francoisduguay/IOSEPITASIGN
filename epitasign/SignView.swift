@@ -6,10 +6,16 @@
 import SwiftUI
 
 struct SignView: View {
+    @EnvironmentObject private var environment: AppEnvironment
     @Binding var flowState: AttendanceFlowState
     @State private var points: [CGPoint] = []
     @State private var signatureStartedAt: Date?
     @State private var signatureDuration: TimeInterval = 0
+    @State private var activeToken: AttendanceToken?
+    @State private var backendError: String?
+    @State private var isWorking = false
+
+    private let activeCourseId = "mock-ios-course"
 
     private var metrics: SignatureMetrics {
         SignatureMetrics(points: points, duration: signatureDuration)
@@ -21,9 +27,14 @@ struct SignView: View {
                 StatusBanner(flowState: flowState)
 
                 VStack(spacing: 18) {
-                    NFCButton(flowState: $flowState) {
+                    NFCButton(flowState: $flowState, isWorking: isWorking) {
                         points.removeAll()
                         signatureDuration = 0
+                        signatureStartedAt = nil
+                        activeToken = nil
+                        backendError = nil
+                    } onScan: {
+                        startScan()
                     }
 
                     FlowSteps(current: flowState)
@@ -38,6 +49,15 @@ struct SignView: View {
                 )
 
                 SignatureRules(metrics: metrics)
+
+                if let backendError {
+                    Label(backendError, systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                }
 
                 Spacer(minLength: 90)
             }
@@ -64,7 +84,7 @@ struct SignView: View {
     private var actionTitle: String {
         switch flowState {
         case .ready: "Scanner NFC"
-        case .scanning: "Scan en cours"
+        case .scanning: isWorking ? "Traitement en cours" : "Scan en cours"
         case .tokenReady, .signing, .signatureRejected: "Valider la signature"
         case .validated: "Presence validee"
         }
@@ -80,45 +100,89 @@ struct SignView: View {
     }
 
     private var canTapMainAction: Bool {
-        flowState == .ready || flowState == .tokenReady || flowState == .signing || flowState == .signatureRejected
+        !isWorking && (flowState == .ready || flowState == .tokenReady || flowState == .signing || flowState == .signatureRejected)
+    }
+
+    private func startScan() {
+        guard !isWorking else { return }
+
+        Task {
+            isWorking = true
+            flowState = .scanning
+            backendError = nil
+            haptic(.light)
+
+            do {
+                let scan = try await environment.nfcScanner.scanStudentCard()
+                activeToken = try await environment.attendanceService.requestToken(for: scan, courseId: activeCourseId)
+                flowState = .tokenReady
+                haptic(.success)
+            } catch {
+                backendError = error.localizedDescription
+                flowState = .ready
+                haptic(.warning)
+            }
+
+            isWorking = false
+        }
     }
 
     private func validateSignature() {
         if flowState == .ready {
-            flowState = .scanning
-            haptic(.light)
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                flowState = .tokenReady
-                haptic(.success)
-            }
+            startScan()
             return
         }
 
-        if metrics.isValid {
-            flowState = .validated
-            haptic(.success)
-        } else {
+        guard metrics.isValid else {
             flowState = .signatureRejected
             haptic(.warning)
+            return
+        }
+
+        guard let activeToken else {
+            backendError = "Aucun token actif. Scanne a nouveau la carte."
+            flowState = .ready
+            haptic(.warning)
+            return
+        }
+
+        Task {
+            isWorking = true
+            backendError = nil
+
+            do {
+                let proof = try SignatureProofBuilder.makeProof(points: points, duration: signatureDuration)
+                let request = AttendanceValidationRequest(
+                    token: activeToken,
+                    signatureProof: proof,
+                    signatureMetrics: metrics,
+                    courseId: activeCourseId
+                )
+
+                try await environment.attendanceService.submitSignature(request)
+                flowState = .validated
+                haptic(.success)
+            } catch {
+                backendError = error.localizedDescription
+                flowState = .signatureRejected
+                haptic(.warning)
+            }
+
+            isWorking = false
         }
     }
 }
 
 struct NFCButton: View {
     @Binding var flowState: AttendanceFlowState
+    let isWorking: Bool
     let resetSignature: () -> Void
+    let onScan: () -> Void
 
     var body: some View {
         Button {
-            flowState = .scanning
             resetSignature()
-            haptic(.light)
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                flowState = .tokenReady
-                haptic(.success)
-            }
+            onScan()
         } label: {
             VStack(spacing: 12) {
                 Image(systemName: flowState == .scanning ? "dot.radiowaves.left.and.right" : "wave.3.right.circle.fill")
@@ -127,7 +191,7 @@ struct NFCButton: View {
                 Text(flowState == .scanning ? "Approche la carte" : "Scanner NFC")
                     .font(.title3.weight(.bold))
 
-                Text("Token temporaire genere apres validation serveur")
+                Text(isWorking ? "Validation serveur en cours" : "Token temporaire genere apres validation serveur")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.white.opacity(0.82))
                     .multilineTextAlignment(.center)
@@ -145,7 +209,7 @@ struct NFCButton: View {
                     .padding(14)
             }
         }
-        .disabled(flowState == .scanning)
+        .disabled(flowState == .scanning || isWorking)
         .buttonStyle(.plain)
     }
 }

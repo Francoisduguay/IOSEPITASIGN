@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject private var environment: AppEnvironment
     @AppStorage("usesDarkMode") private var usesDarkMode = false
     @State private var isAuthenticated = false
 
@@ -15,6 +16,7 @@ struct ContentView: View {
         Group {
             if isAuthenticated {
                 MainShellView {
+                    try? environment.authService.signOut()
                     isAuthenticated = false
                 }
             } else {
@@ -29,4 +31,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environmentObject(AppEnvironment())
 }
