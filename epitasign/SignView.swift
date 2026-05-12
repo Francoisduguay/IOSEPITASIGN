@@ -22,19 +22,19 @@ struct SignView: View {
     }
 
     var body: some View {
-        PageContainer(title: "Signer", subtitle: "NFC puis signature") {
+        PageContainer(title: "Signer", subtitle: "Code EPITA2026 puis signature") {
             VStack(spacing: 18) {
                 StatusBanner(flowState: flowState)
 
                 VStack(spacing: 18) {
-                    NFCButton(flowState: $flowState, isWorking: isWorking) {
+                    CodeButton(flowState: $flowState, isWorking: isWorking) {
                         points.removeAll()
                         signatureDuration = 0
                         signatureStartedAt = nil
                         activeToken = nil
                         backendError = nil
                     } onScan: {
-                        startScan()
+                        validateCode()
                     }
 
                     FlowSteps(current: flowState)
@@ -83,8 +83,8 @@ struct SignView: View {
 
     private var actionTitle: String {
         switch flowState {
-        case .ready: "Scanner NFC"
-        case .scanning: isWorking ? "Traitement en cours" : "Scan en cours"
+        case .ready: "Utiliser le code EPITA2026"
+        case .scanning: isWorking ? "Traitement en cours" : "Verification du code"
         case .tokenReady, .signing, .signatureRejected: "Valider la signature"
         case .validated: "Presence validee"
         }
@@ -92,8 +92,8 @@ struct SignView: View {
 
     private var actionIcon: String {
         switch flowState {
-        case .ready: "wave.3.right.circle.fill"
-        case .scanning: "dot.radiowaves.left.and.right"
+        case .ready: "number.circle.fill"
+        case .scanning: "key.fill"
         case .tokenReady, .signing, .signatureRejected: "signature"
         case .validated: "checkmark.seal.fill"
         }
@@ -103,7 +103,7 @@ struct SignView: View {
         !isWorking && (flowState == .ready || flowState == .tokenReady || flowState == .signing || flowState == .signatureRejected)
     }
 
-    private func startScan() {
+    private func validateCode() {
         guard !isWorking else { return }
 
         Task {
@@ -113,8 +113,8 @@ struct SignView: View {
             haptic(.light)
 
             do {
-                let scan = try await environment.nfcScanner.scanStudentCard()
-                activeToken = try await environment.attendanceService.requestToken(for: scan, courseId: activeCourseId)
+                let code = try await environment.nfcScanner.scanStudentCard()
+                activeToken = try await environment.attendanceService.requestToken(for: code, courseId: activeCourseId)
                 flowState = .tokenReady
                 haptic(.success)
             } catch {
@@ -129,7 +129,7 @@ struct SignView: View {
 
     private func validateSignature() {
         if flowState == .ready {
-            startScan()
+            validateCode()
             return
         }
 
@@ -140,7 +140,7 @@ struct SignView: View {
         }
 
         guard let activeToken else {
-            backendError = "Aucun token actif. Scanne a nouveau la carte."
+            backendError = "Aucun token actif. Valide a nouveau le code."
             flowState = .ready
             haptic(.warning)
             return
@@ -173,7 +173,7 @@ struct SignView: View {
     }
 }
 
-struct NFCButton: View {
+struct CodeButton: View {
     @Binding var flowState: AttendanceFlowState
     let isWorking: Bool
     let resetSignature: () -> Void
@@ -185,13 +185,13 @@ struct NFCButton: View {
             onScan()
         } label: {
             VStack(spacing: 12) {
-                Image(systemName: flowState == .scanning ? "dot.radiowaves.left.and.right" : "wave.3.right.circle.fill")
+                Image(systemName: flowState == .scanning ? "key.fill" : "number.circle.fill")
                     .font(.system(size: 46, weight: .semibold))
 
-                Text(flowState == .scanning ? "Approche la carte" : "Scanner NFC")
+                Text(flowState == .scanning ? "Verification" : "Code EPITA2026")
                     .font(.title3.weight(.bold))
 
-                Text(isWorking ? "Validation serveur en cours" : "Token temporaire genere apres validation serveur")
+                Text(isWorking ? "Validation serveur en cours" : "Token temporaire genere avec le code unique")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.white.opacity(0.82))
                     .multilineTextAlignment(.center)
@@ -265,7 +265,7 @@ struct SignaturePanel: View {
                     VStack(spacing: 8) {
                         Image(systemName: isEnabled ? "hand.draw.fill" : "lock.fill")
                             .font(.title2)
-                        Text(isEnabled ? "Signe ici avec le doigt" : "Scanne le NFC avant de signer")
+                        Text(isEnabled ? "Signe ici avec le doigt" : "Valide le code EPITA2026 avant de signer")
                             .font(.callout.weight(.semibold))
                     }
                     .foregroundStyle(.secondary)
@@ -362,7 +362,7 @@ struct FlowSteps: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            StepChip(title: "NFC", icon: "wave.3.right", isActive: current.progress >= 1, color: current.statusColor)
+            StepChip(title: "Code", icon: "number", isActive: current.progress >= 1, color: current.statusColor)
             StepDivider(isActive: current.progress >= 2)
             StepChip(title: "Token", icon: "key.fill", isActive: current.progress >= 2, color: current.statusColor)
             StepDivider(isActive: current.progress >= 3)

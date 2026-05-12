@@ -26,7 +26,7 @@ struct LoginView: View {
                     Text("EpitaSign")
                         .font(.system(size: 38, weight: .bold, design: .rounded))
 
-                    Text("Presence NFC et signature numerique pour les cours.")
+                    Text("Code unique et signature numerique pour les cours.")
                         .font(.body)
                         .foregroundStyle(.secondary)
                 }

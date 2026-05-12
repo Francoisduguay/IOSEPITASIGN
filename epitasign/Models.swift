@@ -15,8 +15,8 @@ enum AttendanceFlowState {
 
     var title: String {
         switch self {
-        case .ready: "Pret a scanner"
-        case .scanning: "Lecture NFC"
+        case .ready: "Pret a verifier"
+        case .scanning: "Verification du code"
         case .tokenReady: "Token temporaire actif"
         case .signing: "Signature en cours"
         case .signatureRejected: "Signature insuffisante"
@@ -27,7 +27,7 @@ enum AttendanceFlowState {
     var message: String {
         switch self {
         case .ready: "Le bouton principal reste accessible en bas."
-        case .scanning: "Simulation du scan physique de la carte."
+        case .scanning: "Verification du code unique EPITA2026."
         case .tokenReady: "Le token est pret. Signe dans la zone."
         case .signing: "Complete la signature puis valide."
         case .signatureRejected: "Ajoute plus de mouvement, duree et complexite."
@@ -37,8 +37,8 @@ enum AttendanceFlowState {
 
     var shortLabel: String {
         switch self {
-        case .ready: "NFC"
-        case .scanning: "SCAN"
+        case .ready: "CODE"
+        case .scanning: "CODE"
         case .tokenReady: "TOKEN"
         case .signing: "SIGN"
         case .signatureRejected: "REFUS"
@@ -48,8 +48,8 @@ enum AttendanceFlowState {
 
     var icon: String {
         switch self {
-        case .ready: "wave.3.right.circle.fill"
-        case .scanning: "dot.radiowaves.left.and.right"
+        case .ready: "number.circle.fill"
+        case .scanning: "key.fill"
         case .tokenReady: "key.fill"
         case .signing: "signature"
         case .signatureRejected: "exclamationmark.triangle.fill"
