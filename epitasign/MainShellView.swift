@@ -16,7 +16,7 @@ struct MainShellView: View {
             AppBackground()
 
             TabView(selection: $selectedPage) {
-                ScheduleView()
+                ScheduleView(user: user)
                     .tag(0)
 
                 SignView(flowState: $flowState)

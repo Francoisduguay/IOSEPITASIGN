@@ -16,6 +16,7 @@ struct SignView: View {
     @State private var backendError: String?
     @State private var enteredCode = ""
     @State private var isWorking = false
+    @State private var showsValidationToast = false
 
     private var metrics: SignatureMetrics {
         SignatureMetrics(points: points, duration: signatureDuration)
@@ -52,6 +53,15 @@ struct SignView: View {
                         .background(.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
                 }
 
+                if showsValidationToast {
+                    Label("Presence validee", systemImage: "checkmark.seal.fill")
+                        .font(.headline)
+                        .foregroundStyle(.green)
+                        .frame(maxWidth: .infinity)
+                        .padding(14)
+                        .background(.green.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
+                }
+
                 Spacer(minLength: 90)
             }
         } bottomAction: {
@@ -63,7 +73,7 @@ struct SignView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 58)
             }
-            .buttonStyle(PrimaryButtonStyle(tint: flowState.statusColor))
+            .buttonStyle(PrimaryButtonStyle(tint: actionTint))
             .disabled(!canTapMainAction)
             .opacity(canTapMainAction ? 1 : 0.45)
         }
@@ -105,6 +115,10 @@ struct SignView: View {
         case .tokenReady, .signing, .signatureRejected: "signature"
         case .validated: "checkmark.seal.fill"
         }
+    }
+
+    private var actionTint: Color {
+        needsCode ? Color(red: 0.43, green: 0.58, blue: 0.88) : flowState.statusColor
     }
 
     private var canTapMainAction: Bool {
@@ -194,6 +208,7 @@ struct SignView: View {
 
                 try await environment.attendanceService.submitSignature(request)
                 flowState = .validated
+                scheduleValidationToast()
                 haptic(.success)
             } catch {
                 backendError = error.localizedDescription
@@ -202,6 +217,23 @@ struct SignView: View {
             }
 
             isWorking = false
+        }
+    }
+
+    private func scheduleValidationToast() {
+        showsValidationToast = true
+
+        Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            await MainActor.run {
+                showsValidationToast = false
+                flowState = .ready
+                enteredCode = ""
+                points.removeAll()
+                signatureDuration = 0
+                signatureStartedAt = nil
+                activeToken = nil
+            }
         }
     }
 
@@ -246,7 +278,7 @@ struct CodeEntryCard: View {
 
             Text(isWorking ? "Validation serveur en cours" : "Entre le code pour debloquer la signature")
                 .font(.caption.weight(.medium))
-                .foregroundStyle(.white.opacity(0.82))
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
             TextField("Ex: EPITA2026", text: $code)
@@ -261,16 +293,17 @@ struct CodeEntryCard: View {
                 .frame(height: 46)
                 .background(.white, in: RoundedRectangle(cornerRadius: 8))
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(.primary)
         .padding(16)
         .frame(maxWidth: .infinity)
-        .background(flowState.statusColor.gradient, in: RoundedRectangle(cornerRadius: 8))
+        .background(Color(red: 0.86, green: 0.91, blue: 1.0), in: RoundedRectangle(cornerRadius: 8))
         .overlay(alignment: .topTrailing) {
             Text(flowState.shortLabel)
                 .font(.caption.weight(.bold))
+                .foregroundStyle(Color(red: 0.19, green: 0.29, blue: 0.55))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(.white.opacity(0.18), in: Capsule())
+                .background(.white.opacity(0.72), in: Capsule())
                 .padding(14)
         }
     }

@@ -9,6 +9,7 @@ struct LoginView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @State private var email = ""
     @State private var password = ""
+    @State private var acceptedTerms = false
     @State private var errorMessage: String?
     @State private var isWorking = false
     let onLogin: (AuthUser) -> Void
@@ -40,6 +41,19 @@ struct LoginView: View {
                         .frame(height: 54)
                         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
 
+                    Toggle(isOn: $acceptedTerms) {
+                        Text("J'accepte les conditions obligatoires RGPD")
+                            .font(.footnote.weight(.semibold))
+                    }
+                    .toggleStyle(.switch)
+                    .padding(14)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+
+                    Link(destination: URL(string: "https://www.epita.fr/politique-de-confidentialite/")!) {
+                        Label("Lire les conditions RGPD", systemImage: "doc.text.magnifyingglass")
+                            .font(.footnote.weight(.semibold))
+                    }
+
                     if let errorMessage {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote.weight(.semibold))
@@ -58,8 +72,8 @@ struct LoginView: View {
                         .frame(height: 58)
                 }
                 .buttonStyle(PrimaryButtonStyle(tint: .blue))
-                .disabled(isWorking)
-                .opacity(isWorking ? 0.65 : 1)
+                .disabled(isWorking || !acceptedTerms)
+                .opacity((isWorking || !acceptedTerms) ? 0.65 : 1)
                 .padding(.bottom, 18)
             }
             .padding(22)
@@ -68,6 +82,11 @@ struct LoginView: View {
 
     private func signIn() {
         guard !isWorking else { return }
+        guard acceptedTerms else {
+            errorMessage = "Tu dois accepter les conditions RGPD pour continuer."
+            haptic(.warning)
+            return
+        }
 
         Task {
             isWorking = true

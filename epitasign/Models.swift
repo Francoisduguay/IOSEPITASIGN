@@ -178,7 +178,7 @@ struct Course: Identifiable {
     }
 }
 
-private enum CourseFormatters {
+enum CourseFormatters {
     static let time: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
@@ -189,6 +189,27 @@ private enum CourseFormatters {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "fr_FR")
         formatter.dateFormat = "EEEE"
+        return formatter
+    }()
+
+    static let dayHeader: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.dateFormat = "EEEE d MMMM"
+        return formatter
+    }()
+
+    static let fullDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.dateStyle = .full
+        return formatter
+    }()
+
+    static let shortDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.dateFormat = "d MMM"
         return formatter
     }()
 }
@@ -203,6 +224,32 @@ struct AttendanceRecord: Identifiable {
     let date: String
     let time: String
     let status: AttendanceStatus
+    let signaturePreview: String?
+}
+
+struct StudentAttendance: Identifiable {
+    let id: String
+    let name: String
+    var status: StudentPresenceStatus
+}
+
+enum StudentPresenceStatus {
+    case present
+    case absent
+
+    var label: String {
+        switch self {
+        case .present: "Present"
+        case .absent: "Absent"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .present: .green
+        case .absent: .red
+        }
+    }
 }
 
 struct PagerItem {

@@ -82,6 +82,24 @@ struct epitasignTests {
         #expect(UserRole.inferred(from: "admin@epita.fr") == .admin)
         #expect(UserRole.inferred(from: "prof.maths@epita.fr") == .teacher)
         #expect(UserRole.inferred(from: "prenom.nom@epita.fr") == .student)
+        #expect(UserRole.admin.canManageAttendance)
+        #expect(UserRole.teacher.canManageAttendance)
+        #expect(UserRole.student.canManageAttendance == false)
+    }
+
+    @Test func courseStatusResolverUsesCurrentTime() {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let started = calendar.date(byAdding: .minute, value: -10, to: now)!
+        let ended = calendar.date(byAdding: .minute, value: 80, to: now)!
+        let futureStart = calendar.date(byAdding: .minute, value: 15, to: now)!
+        let futureEnd = calendar.date(byAdding: .minute, value: 105, to: now)!
+        let pastStart = calendar.date(byAdding: .minute, value: -120, to: now)!
+        let pastEnd = calendar.date(byAdding: .minute, value: -30, to: now)!
+
+        #expect(CourseStatusResolver.status(for: started, endsAt: ended, now: now) == .current)
+        #expect(CourseStatusResolver.status(for: futureStart, endsAt: futureEnd, now: now) == .upcoming)
+        #expect(CourseStatusResolver.status(for: pastStart, endsAt: pastEnd, now: now) == .signed)
     }
 
 }

@@ -24,6 +24,10 @@ enum UserRole: String, Equatable {
         }
     }
 
+    var canManageAttendance: Bool {
+        self == .teacher || self == .admin
+    }
+
     static func inferred(from email: String) -> UserRole {
         let localPart = email.split(separator: "@").first?.lowercased() ?? ""
 
