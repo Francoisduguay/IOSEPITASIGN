@@ -47,6 +47,26 @@ EpitaSign est une application mobile destinée aux enseignants pour gérer et v�
 4. Demander à l'étudiant de signer sur l'écran.
 5. Attendre la confirmation de validation; la présence est alors enregistrée.
 
+## Utilisation détaillée (enseignant)
+
+Cette section décrit pas-à-pas l'expérience utilisateur telle qu'elle apparaît à l'enseignant.
+
+- **Étape 1 — Lancer l'application et choisir la séance** : ouvrez l'application, sélectionnez la date et la session (cours/TD/examen) dans la liste des séances programmées.
+- **Étape 2 — Démarrer la prise de présence** : appuyez sur le bouton `Prendre la présence` ou `Démarrer appel`. L'interface affiche la liste des étudiants attendus et un bouton `Scanner NFC`.
+- **Étape 3 — Identifier l'étudiant (NFC)** : demandez à l'étudiant de présenter sa carte. Lorsque la lecture NFC réussit, l'application affiche le nom de l'étudiant et un aperçu (photo/ID si disponible).
+- **Étape 4 — Collecte de la signature** : l'application affiche un champ de signature plein écran. Demandez à l'étudiant d'apposer sa signature sur l'écran. Vous pouvez annuler et recommencer si la prise est incorrecte.
+- **Étape 5 — Vérification et envoi** : après la capture, appuyez sur `Valider`. L'application construit la preuve (UID NFC + signature + token) et l'envoie au serveur; un spinner indique la progression.
+- **Étape 6 — Résultat** : l'application affiche `Présence enregistrée` si la vérification réussit, ou un message d'erreur expliquant la cause (token expiré, UID inconnu, problème réseau) avec option de réessayer.
+- **Étape 7 — Gestion des cas particuliers** :
+   - Si NFC échoue : option de saisie manuelle de l'identifiant étudiant (ou sélectionner dans la liste), puis procéder à la signature.
+   - Si l'étudiant refuse de signer : l'enseignant peut marquer l'absence ou déclencher une procédure de vérification supplémentaire.
+
+Conseils rapides :
+
+- Vérifiez la connectivité avant une session importante.
+- Si vous voyez un message `UID inconnu`, confirmez l'inscription de l'étudiant dans le roster.
+- Utilisez la fonction d'export / rapport côté serveur pour obtenir la liste horodatée des présences.
+
 ## Limites et recommandations
 
 - Si le composant NFC n'est pas disponible sur l'appareil, prévoir une procédure alternative (saisie manuelle d'ID + vérification suppléante).
