@@ -11,7 +11,7 @@ struct LoginView: View {
     @State private var password = ""
     @State private var errorMessage: String?
     @State private var isWorking = false
-    let onLogin: () -> Void
+    let onLogin: (AuthUser) -> Void
 
     var body: some View {
         ZStack {
@@ -74,9 +74,9 @@ struct LoginView: View {
             errorMessage = nil
 
             do {
-                _ = try await environment.authService.signIn(email: email, password: password)
+                let user = try await environment.authService.signIn(email: email, password: password)
                 haptic(.success)
-                onLogin()
+                onLogin(user)
             } catch {
                 errorMessage = error.localizedDescription
                 haptic(.warning)

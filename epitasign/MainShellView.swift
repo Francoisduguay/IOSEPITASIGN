@@ -8,6 +8,7 @@ import SwiftUI
 struct MainShellView: View {
     @State private var selectedPage = 1
     @State private var flowState: AttendanceFlowState = .ready
+    let user: AuthUser?
     let onLogout: () -> Void
 
     var body: some View {
@@ -24,7 +25,7 @@ struct MainShellView: View {
                 HistoryView()
                     .tag(2)
 
-                SettingsView(onLogout: onLogout)
+                SettingsView(user: user, onLogout: onLogout)
                     .tag(3)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -42,9 +43,9 @@ struct BottomPager: View {
 
     private let items = [
         PagerItem(title: "Cours", icon: "calendar"),
-        PagerItem(title: "Signer", icon: "wave.3.right.circle.fill"),
+        PagerItem(title: "Signer", icon: "signature"),
         PagerItem(title: "Historique", icon: "clock.arrow.circlepath"),
-        PagerItem(title: "Prefs", icon: "gearshape.fill")
+        PagerItem(title: "Parametres", icon: "gearshape.fill")
     ]
 
     var body: some View {

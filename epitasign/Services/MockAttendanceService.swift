@@ -10,7 +10,7 @@ struct MockNFCScanner: NFCScanning {
         try await Task.sleep(nanoseconds: 700_000_000)
 
         return NFCScanResult(
-            tagIdentifier: "EPITA2026",
+            tagIdentifier: AttendanceCode.validCode,
             tagType: "Code fixe",
             technologies: ["ManualCode"],
             scannedAt: Date()

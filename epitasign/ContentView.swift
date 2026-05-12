@@ -11,16 +11,19 @@ struct ContentView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @AppStorage("usesDarkMode") private var usesDarkMode = false
     @State private var isAuthenticated = false
+    @State private var currentUser: AuthUser?
 
     var body: some View {
         Group {
             if isAuthenticated {
-                MainShellView {
+                MainShellView(user: currentUser) {
                     try? environment.authService.signOut()
+                    currentUser = nil
                     isAuthenticated = false
                 }
             } else {
-                LoginView {
+                LoginView { user in
+                    currentUser = user
                     isAuthenticated = true
                 }
             }

@@ -27,7 +27,7 @@ enum AttendanceFlowState {
     var message: String {
         switch self {
         case .ready: "Le bouton principal reste accessible en bas."
-        case .scanning: "Verification du code unique EPITA2026."
+        case .scanning: "Verification du code du cours."
         case .tokenReady: "Le token est pret. Signe dans la zone."
         case .signing: "Complete la signature puis valide."
         case .signatureRejected: "Ajoute plus de mouvement, duree et complexite."
@@ -162,11 +162,39 @@ struct SignatureMetrics {
 }
 
 struct Course: Identifiable {
-    let id = UUID()
+    let id: String
     let title: String
     let room: String
-    let time: String
+    let startsAt: Date
+    let endsAt: Date
     let status: AttendanceStatus
+
+    var time: String {
+        CourseFormatters.time.string(from: startsAt)
+    }
+
+    var day: String {
+        CourseFormatters.day.string(from: startsAt).capitalized
+    }
+}
+
+private enum CourseFormatters {
+    static let time: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
+
+    static let day: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.dateFormat = "EEEE"
+        return formatter
+    }()
+}
+
+protocol CourseServicing {
+    func fetchCourses() async throws -> [Course]
 }
 
 struct AttendanceRecord: Identifiable {
@@ -201,18 +229,18 @@ enum AttendanceStatus {
 
     var shortLabel: String {
         switch self {
-        case .signed: "OK"
-        case .current: "NOW"
-        case .upcoming: "NEXT"
-        case .late: "+12"
-        case .missed: "ABS"
+        case .signed: "Signe"
+        case .current: "En cours"
+        case .upcoming: "A venir"
+        case .late: "Retard"
+        case .missed: "Absent"
         }
     }
 
     var icon: String {
         switch self {
         case .signed: "checkmark.circle.fill"
-        case .current: "wave.3.right.circle.fill"
+        case .current: "play.circle.fill"
         case .upcoming: "clock.fill"
         case .late: "exclamationmark.circle.fill"
         case .missed: "xmark.circle.fill"

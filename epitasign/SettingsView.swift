@@ -9,16 +9,17 @@ struct SettingsView: View {
     @AppStorage("usesDarkMode") private var usesDarkMode = false
     @AppStorage("allowsNotifications") private var allowsNotifications = true
     @AppStorage("usesHaptics") private var usesHaptics = true
+    let user: AuthUser?
     let onLogout: () -> Void
 
     var body: some View {
-        PageContainer(title: "Parametres", subtitle: "Compte et preferences") {
+        PageContainer(title: "Parametres", subtitle: "Compte et reglages") {
             VStack(spacing: 14) {
-                ProfileHeader()
+                ProfileHeader(user: user)
 
-                SettingToggle(icon: "moon.fill", title: "Dark mode", subtitle: "Forcer l'apparence sombre", isOn: $usesDarkMode)
+                SettingToggle(icon: "moon.fill", title: "Mode sombre", subtitle: "Forcer l'apparence sombre", isOn: $usesDarkMode)
                 SettingToggle(icon: "bell.badge.fill", title: "Notifications", subtitle: "Rappels avant les cours", isOn: $allowsNotifications)
-                SettingToggle(icon: "iphone.radiowaves.left.and.right", title: "Haptique", subtitle: "Retour immediat au scan", isOn: $usesHaptics)
+                SettingToggle(icon: "iphone.radiowaves.left.and.right", title: "Vibrations", subtitle: "Retour tactile apres une action", isOn: $usesHaptics)
 
                 Button(role: .destructive) {
                     haptic(.warning)
@@ -39,23 +40,25 @@ struct SettingsView: View {
 }
 
 struct ProfileHeader: View {
+    let user: AuthUser?
+
     var body: some View {
         HStack(spacing: 14) {
             Circle()
                 .fill(Color.blue.gradient)
                 .frame(width: 56, height: 56)
                 .overlay {
-                    Text("NE")
+                    Text(initials)
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.white)
                 }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("nadir.etudiant@epita.fr")
+                Text(user?.email ?? "Compte connecte")
                     .font(.headline)
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
-                Text("Role: student")
+                Text("Role : \(user?.role.label ?? "Non defini")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -68,6 +71,16 @@ struct ProfileHeader: View {
         }
         .padding(14)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var initials: String {
+        guard let email = user?.email, let localPart = email.split(separator: "@").first else {
+            return "?"
+        }
+
+        let parts = localPart.split(separator: ".")
+        let letters = parts.prefix(2).compactMap { $0.first }
+        return letters.isEmpty ? String(localPart.prefix(2)).uppercased() : String(letters).uppercased()
     }
 }
 

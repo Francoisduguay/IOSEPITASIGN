@@ -39,7 +39,10 @@ final class SupabaseAuthService: AuthServicing {
             throw AuthError.invalidEpitaEmail
         }
 
-        return AuthUser(uid: session.user.id.uuidString, email: email)
+        let uid = session.user.id.uuidString
+        let role = await fetchProfileRole(userId: uid) ?? UserRole.inferred(from: email)
+
+        return AuthUser(uid: uid, email: email, role: role)
         #else
         return try await mockSignIn(email: normalizedEmail)
         #endif
@@ -57,6 +60,32 @@ final class SupabaseAuthService: AuthServicing {
 
     private func mockSignIn(email: String) async throws -> AuthUser {
         try await Task.sleep(nanoseconds: 350_000_000)
-        return AuthUser(uid: "mock-user", email: email)
+        return AuthUser(uid: "mock-user", email: email, role: UserRole.inferred(from: email))
     }
+
+    #if canImport(Supabase)
+    private func fetchProfileRole(userId: String) async -> UserRole? {
+        guard let client else { return nil }
+
+        do {
+            let profile: ProfileRolePayload = try await client
+                .from("profiles")
+                .select("role")
+                .eq("id", value: userId)
+                .single()
+                .execute()
+                .value
+
+            return UserRole(rawValue: profile.role)
+        } catch {
+            return nil
+        }
+    }
+    #endif
 }
+
+#if canImport(Supabase)
+private struct ProfileRolePayload: Decodable {
+    let role: String
+}
+#endif

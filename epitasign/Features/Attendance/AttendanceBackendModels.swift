@@ -5,6 +5,27 @@
 
 import Foundation
 
+enum AttendanceCode {
+    static let validCode = "EPITA2026"
+
+    static func isValid(_ code: String) -> Bool {
+        normalized(code) == validCode
+    }
+
+    static func normalized(_ code: String) -> String {
+        code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    }
+
+    static func scanResult(from code: String) -> NFCScanResult {
+        NFCScanResult(
+            tagIdentifier: normalized(code),
+            tagType: "Code fixe",
+            technologies: ["ManualCode"],
+            scannedAt: Date()
+        )
+    }
+}
+
 struct NFCScanResult: Equatable {
     let tagIdentifier: String
     let tagType: String
@@ -44,6 +65,7 @@ protocol AttendanceServicing {
 enum AttendanceBackendError: LocalizedError {
     case invalidSignature
     case missingSupabaseSDK
+    case missingActiveCourse
     case malformedServerResponse
 
     var errorDescription: String? {
@@ -52,6 +74,8 @@ enum AttendanceBackendError: LocalizedError {
             "La signature ne respecte pas les regles minimales."
         case .missingSupabaseSDK:
             "Supabase SDK n'est pas encore ajoute au projet Xcode."
+        case .missingActiveCourse:
+            "Aucun cours actif n'est disponible."
         case .malformedServerResponse:
             "La reponse du serveur Supabase est invalide."
         }

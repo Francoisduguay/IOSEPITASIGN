@@ -12,43 +12,36 @@ struct SignView: View {
     @State private var signatureStartedAt: Date?
     @State private var signatureDuration: TimeInterval = 0
     @State private var activeToken: AttendanceToken?
+    @State private var activeCourse: Course?
     @State private var backendError: String?
+    @State private var enteredCode = ""
     @State private var isWorking = false
-
-    private let activeCourseId = "mock-ios-course"
 
     private var metrics: SignatureMetrics {
         SignatureMetrics(points: points, duration: signatureDuration)
     }
 
     var body: some View {
-        PageContainer(title: "Signer", subtitle: "Code EPITA2026 puis signature") {
+        PageContainer(title: "Signer", subtitle: signSubtitle) {
             VStack(spacing: 18) {
                 StatusBanner(flowState: flowState)
 
-                VStack(spacing: 18) {
-                    CodeButton(flowState: $flowState, isWorking: isWorking) {
-                        points.removeAll()
-                        signatureDuration = 0
-                        signatureStartedAt = nil
-                        activeToken = nil
-                        backendError = nil
-                    } onScan: {
-                        validateCode()
-                    }
+                if needsCode {
+                    CodeEntryCard(
+                        code: $enteredCode,
+                        flowState: $flowState,
+                        isWorking: isWorking
+                    )
+                } else {
+                    SignaturePanel(
+                        points: $points,
+                        startedAt: $signatureStartedAt,
+                        duration: $signatureDuration,
+                        isEnabled: true
+                    )
 
-                    FlowSteps(current: flowState)
+                    SignatureRules(metrics: metrics)
                 }
-                .padding(.top, 4)
-
-                SignaturePanel(
-                    points: $points,
-                    startedAt: $signatureStartedAt,
-                    duration: $signatureDuration,
-                    isEnabled: flowState == .tokenReady || flowState == .signing || flowState == .signatureRejected
-                )
-
-                SignatureRules(metrics: metrics)
 
                 if let backendError {
                     Label(backendError, systemImage: "exclamationmark.triangle.fill")
@@ -79,11 +72,26 @@ struct SignView: View {
                 flowState = .signing
             }
         }
+        .task {
+            await loadActiveCourse()
+        }
+    }
+
+    private var needsCode: Bool {
+        flowState == .ready || flowState == .scanning
+    }
+
+    private var signSubtitle: String {
+        if needsCode {
+            return activeCourse?.title ?? "Code du cours"
+        }
+
+        return activeCourse?.title ?? "Signature"
     }
 
     private var actionTitle: String {
         switch flowState {
-        case .ready: "Utiliser le code EPITA2026"
+        case .ready: "Verifier le code"
         case .scanning: isWorking ? "Traitement en cours" : "Verification du code"
         case .tokenReady, .signing, .signatureRejected: "Valider la signature"
         case .validated: "Presence validee"
@@ -100,11 +108,32 @@ struct SignView: View {
     }
 
     private var canTapMainAction: Bool {
-        !isWorking && (flowState == .ready || flowState == .tokenReady || flowState == .signing || flowState == .signatureRejected)
+        !isWorking && ((flowState == .ready && !enteredCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) || flowState == .tokenReady || flowState == .signing || flowState == .signatureRejected)
     }
 
     private func validateCode() {
         guard !isWorking else { return }
+
+        guard AttendanceCode.isValid(enteredCode) else {
+            backendError = "Code incorrect. Entre le code donne pour le cours."
+            activeToken = nil
+            flowState = .ready
+            haptic(.warning)
+            return
+        }
+
+        points.removeAll()
+        signatureDuration = 0
+        signatureStartedAt = nil
+        activeToken = nil
+        backendError = nil
+
+        guard let courseId = activeCourse?.id else {
+            backendError = "Aucun cours disponible pour generer le token."
+            flowState = .ready
+            haptic(.warning)
+            return
+        }
 
         Task {
             isWorking = true
@@ -113,8 +142,8 @@ struct SignView: View {
             haptic(.light)
 
             do {
-                let code = try await environment.nfcScanner.scanStudentCard()
-                activeToken = try await environment.attendanceService.requestToken(for: code, courseId: activeCourseId)
+                let code = AttendanceCode.scanResult(from: enteredCode)
+                activeToken = try await environment.attendanceService.requestToken(for: code, courseId: courseId)
                 flowState = .tokenReady
                 haptic(.success)
             } catch {
@@ -151,12 +180,16 @@ struct SignView: View {
             backendError = nil
 
             do {
+                guard let courseId = activeCourse?.id else {
+                    throw AttendanceBackendError.missingActiveCourse
+                }
+
                 let proof = try SignatureProofBuilder.makeProof(points: points, duration: signatureDuration)
                 let request = AttendanceValidationRequest(
                     token: activeToken,
                     signatureProof: proof,
                     signatureMetrics: metrics,
-                    courseId: activeCourseId
+                    courseId: courseId
                 )
 
                 try await environment.attendanceService.submitSignature(request)
@@ -171,46 +204,74 @@ struct SignView: View {
             isWorking = false
         }
     }
+
+    private func loadActiveCourse() async {
+        do {
+            let courses = try await environment.courseService.fetchCourses()
+            activeCourse = pickActiveCourse(from: courses)
+        } catch {
+            backendError = error.localizedDescription
+        }
+    }
+
+    private func pickActiveCourse(from courses: [Course]) -> Course? {
+        let calendar = Calendar.current
+        let now = Date()
+        let sortedCourses = courses.sorted { $0.startsAt < $1.startsAt }
+
+        if let current = sortedCourses.first(where: { $0.status == .current }) {
+            return current
+        }
+
+        if let today = sortedCourses.first(where: { calendar.isDate($0.startsAt, inSameDayAs: now) }) {
+            return today
+        }
+
+        return sortedCourses.first(where: { $0.startsAt > now }) ?? sortedCourses.first
+    }
 }
 
-struct CodeButton: View {
+struct CodeEntryCard: View {
+    @Binding var code: String
     @Binding var flowState: AttendanceFlowState
     let isWorking: Bool
-    let resetSignature: () -> Void
-    let onScan: () -> Void
 
     var body: some View {
-        Button {
-            resetSignature()
-            onScan()
-        } label: {
-            VStack(spacing: 12) {
-                Image(systemName: flowState == .scanning ? "key.fill" : "number.circle.fill")
-                    .font(.system(size: 46, weight: .semibold))
+        VStack(spacing: 12) {
+            Image(systemName: flowState == .scanning ? "key.fill" : "number.circle.fill")
+                .font(.system(size: 46, weight: .semibold))
 
-                Text(flowState == .scanning ? "Verification" : "Code EPITA2026")
-                    .font(.title3.weight(.bold))
+            Text(flowState == .scanning ? "Verification" : "Code du cours")
+                .font(.title3.weight(.bold))
 
-                Text(isWorking ? "Validation serveur en cours" : "Token temporaire genere avec le code unique")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.82))
-                    .multilineTextAlignment(.center)
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 190)
-            .background(flowState.statusColor.gradient, in: RoundedRectangle(cornerRadius: 8))
-            .overlay(alignment: .topTrailing) {
-                Text(flowState.shortLabel)
-                    .font(.caption.weight(.bold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(.white.opacity(0.18), in: Capsule())
-                    .padding(14)
-            }
+            Text(isWorking ? "Validation serveur en cours" : "Entre le code pour debloquer la signature")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.white.opacity(0.82))
+                .multilineTextAlignment(.center)
+
+            TextField("Ex: EPITA2026", text: $code)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .textFieldStyle(.plain)
+                .font(.headline.monospaced())
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 14)
+                .frame(height: 46)
+                .background(.white, in: RoundedRectangle(cornerRadius: 8))
         }
-        .disabled(flowState == .scanning || isWorking)
-        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(flowState.statusColor.gradient, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(alignment: .topTrailing) {
+            Text(flowState.shortLabel)
+                .font(.caption.weight(.bold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.white.opacity(0.18), in: Capsule())
+                .padding(14)
+        }
     }
 }
 
@@ -265,7 +326,7 @@ struct SignaturePanel: View {
                     VStack(spacing: 8) {
                         Image(systemName: isEnabled ? "hand.draw.fill" : "lock.fill")
                             .font(.title2)
-                        Text(isEnabled ? "Signe ici avec le doigt" : "Valide le code EPITA2026 avant de signer")
+                        Text(isEnabled ? "Signe ici avec le doigt" : "Entre le code du cours avant de signer")
                             .font(.callout.weight(.semibold))
                     }
                     .foregroundStyle(.secondary)
