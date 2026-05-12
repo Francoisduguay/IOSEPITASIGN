@@ -12,9 +12,9 @@ final class AppEnvironment: ObservableObject {
     let attendanceService: AttendanceServicing
 
     init(
-        authService: AuthServicing = FirebaseAuthService(),
+        authService: AuthServicing = SupabaseAuthService(),
         nfcScanner: NFCScanning = RealNFCScanner(),
-        attendanceService: AttendanceServicing = FirebaseAttendanceService()
+        attendanceService: AttendanceServicing = SupabaseAttendanceService()
     ) {
         self.authService = authService
         self.nfcScanner = nfcScanner

@@ -31,7 +31,7 @@ enum AttendanceFlowState {
         case .tokenReady: "Le token est pret. Signe dans la zone."
         case .signing: "Complete la signature puis valide."
         case .signatureRejected: "Ajoute plus de mouvement, duree et complexite."
-        case .validated: "La preuve serait envoyee a Firebase Storage."
+        case .validated: "La preuve serait envoyee a Supabase Storage."
         }
     }
 
