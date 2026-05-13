@@ -11,6 +11,7 @@ final class AppEnvironment: ObservableObject {
     let nfcScanner: NFCScanning
     let attendanceService: AttendanceServicing
     let courseService: CourseServicing
+    @Published private(set) var signedCourseIds: Set<String> = []
 
     init(
         authService: AuthServicing = SupabaseAuthService(),
@@ -22,5 +23,13 @@ final class AppEnvironment: ObservableObject {
         self.nfcScanner = nfcScanner
         self.attendanceService = attendanceService
         self.courseService = courseService
+    }
+
+    func markCourseSigned(_ courseId: String) {
+        signedCourseIds.insert(courseId)
+    }
+
+    func isCourseSigned(_ courseId: String) -> Bool {
+        signedCourseIds.contains(courseId)
     }
 }

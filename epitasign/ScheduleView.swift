@@ -44,7 +44,7 @@ struct ScheduleView: View {
                             Button {
                                 selectedCourse = course
                             } label: {
-                                CourseRow(course: course, showsStatus: user?.role != .teacher)
+                                CourseRow(course: course, showsStatus: user?.role != .teacher, status: status(for: course))
                             }
                             .buttonStyle(.plain)
                         }
@@ -57,13 +57,9 @@ struct ScheduleView: View {
         }
         .sheet(item: $selectedCourse) { course in
             if user?.role.canSignStudents == true {
-                if course.status == .current {
-                    TeacherAttendanceView(course: course)
-                } else {
-                    TeacherCourseDetailView(course: course)
-                }
+                TeacherAttendanceView(course: course)
             } else {
-                CourseDetailView(course: course)
+                CourseDetailView(course: course, status: status(for: course), hasSignature: environment.isCourseSigned(course.id))
             }
         }
     }
@@ -135,6 +131,10 @@ struct ScheduleView: View {
         } catch {
             loadingError = error.localizedDescription
         }
+    }
+
+    private func status(for course: Course) -> AttendanceStatus {
+        environment.isCourseSigned(course.id) ? .signed : course.status
     }
 }
 
@@ -230,6 +230,11 @@ enum ScheduleScope: String, CaseIterable, Identifiable {
 struct CourseRow: View {
     let course: Course
     let showsStatus: Bool
+    var status: AttendanceStatus? = nil
+
+    private var displayStatus: AttendanceStatus {
+        status ?? course.status
+    }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -237,9 +242,9 @@ struct CourseRow: View {
                 Text(course.time)
                     .font(.headline.monospacedDigit())
                 if showsStatus {
-                    Text(course.status.shortLabel)
+                    Text(displayStatus.shortLabel)
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(course.status.color)
+                        .foregroundStyle(displayStatus.color)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                 }
@@ -259,9 +264,9 @@ struct CourseRow: View {
             Spacer()
 
             if showsStatus {
-                Image(systemName: course.status.icon)
+                Image(systemName: displayStatus.icon)
                     .font(.title3)
-                    .foregroundStyle(course.status.color)
+                    .foregroundStyle(displayStatus.color)
             }
         }
         .padding(14)
@@ -271,33 +276,32 @@ struct CourseRow: View {
 
 struct CourseDetailView: View {
     let course: Course
+    let status: AttendanceStatus
+    let hasSignature: Bool
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 14) {
-                CourseRow(course: course, showsStatus: true)
-                Text("Ce cours est disponible dans ton emploi du temps.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-            .padding(20)
-            .navigationTitle(course.title)
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-}
+                CourseRow(course: course, showsStatus: true, status: status)
 
-struct TeacherCourseDetailView: View {
-    let course: Course
+                DetailInfoRow(icon: status.icon, title: "Statut", value: status.label, color: status.color)
 
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 14) {
-                CourseRow(course: course, showsStatus: false)
-                Text("Les signatures sont disponibles uniquement pendant le cours en cours.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Ma signature", systemImage: "signature")
+                        .font(.headline)
+
+                    if hasSignature || status == .signed {
+                        SignaturePreview()
+                    } else {
+                        Text("Aucune signature enregistree pour ce cours.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(14)
+                            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+
                 Spacer()
             }
             .padding(20)
@@ -329,9 +333,11 @@ struct TeacherAttendanceView: View {
         NavigationStack {
             VStack(spacing: 14) {
                 HStack(spacing: 10) {
-                    AttendanceCountCard(title: "Signes", count: signedCount, color: .green)
-                    AttendanceCountCard(title: "A signer", count: pendingCount, color: .orange)
+                    AttendanceCountCard(title: "Presents", count: signedCount, color: .green)
+                    AttendanceCountCard(title: "Absents", count: pendingCount, color: .red)
                 }
+
+                CourseRow(course: course, showsStatus: false)
 
                 ForEach($students) { $student in
                     HStack(spacing: 12) {
@@ -397,6 +403,35 @@ struct TeacherAttendanceView: View {
     private func markPending(studentId: String) {
         guard let index = students.firstIndex(where: { $0.id == studentId }) else { return }
         students[index].status = .pending
+    }
+}
+
+struct DetailInfoRow: View {
+    let icon: String
+    let title: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.headline)
+                .frame(width: 42, height: 42)
+                .background(color.opacity(0.16), in: RoundedRectangle(cornerRadius: 8))
+                .foregroundStyle(color)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.headline)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }
 

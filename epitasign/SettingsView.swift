@@ -9,6 +9,7 @@ struct SettingsView: View {
     @AppStorage("usesDarkMode") private var usesDarkMode = false
     @AppStorage("allowsNotifications") private var allowsNotifications = true
     @AppStorage("usesHaptics") private var usesHaptics = true
+    @State private var showsPrivacyPolicy = false
     let user: AuthUser?
     let onLogout: () -> Void
 
@@ -20,6 +21,17 @@ struct SettingsView: View {
                 SettingToggle(icon: "moon.fill", title: "Mode sombre", subtitle: "Forcer l'apparence sombre", isOn: $usesDarkMode)
                 SettingToggle(icon: "bell.badge.fill", title: "Notifications", subtitle: "Rappels avant les cours", isOn: $allowsNotifications)
                 SettingToggle(icon: "iphone.radiowaves.left.and.right", title: "Vibrations", subtitle: "Retour tactile apres une action", isOn: $usesHaptics)
+
+                Button {
+                    showsPrivacyPolicy = true
+                } label: {
+                    SettingsLinkRow(
+                        icon: "lock.shield.fill",
+                        title: "Confidentialite / RGPD",
+                        subtitle: "Donnees collectees et droits utilisateur"
+                    )
+                }
+                .buttonStyle(.plain)
 
                 Button(role: .destructive) {
                     haptic(.warning)
@@ -35,6 +47,9 @@ struct SettingsView: View {
 
                 Spacer(minLength: 90)
             }
+        }
+        .sheet(isPresented: $showsPrivacyPolicy) {
+            PrivacyPolicyView()
         }
     }
 }
@@ -111,6 +126,100 @@ struct SettingToggle: View {
             Toggle("", isOn: $isOn)
                 .labelsHidden()
         }
+        .padding(14)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct SettingsLinkRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.headline)
+                .frame(width: 42, height: 42)
+                .background(Color.appBlue.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
+                .foregroundStyle(Color.appBlue)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.headline)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct PrivacyPolicyView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    PrivacySection(
+                        title: "Donnees collectees",
+                        text: "EpitaSign utilise les donnees necessaires au suivi de presence: adresse email, role, cours, statut de presence et signature associee a un cours."
+                    )
+                    PrivacySection(
+                        title: "Finalite",
+                        text: "Ces donnees servent uniquement a verifier et justifier la presence aux cours, ainsi qu'a permettre aux enseignants de suivre les presents et absents."
+                    )
+                    PrivacySection(
+                        title: "Conservation",
+                        text: "Les donnees sont conservees pendant la duree utile au suivi pedagogique. En mode mock, elles restent locales et temporaires dans l'application."
+                    )
+                    PrivacySection(
+                        title: "Acces et droits",
+                        text: "Tu peux demander l'acces, la rectification ou la suppression de tes donnees aupres de l'administrateur de l'application ou de l'etablissement."
+                    )
+                    PrivacySection(
+                        title: "Securite",
+                        text: "Les signatures et informations de presence sont limitees aux personnes autorisees: l'etudiant concerne, les enseignants et les administrateurs habilites."
+                    )
+                }
+                .padding(20)
+            }
+            .navigationTitle("Confidentialite")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Fermer") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct PrivacySection: View {
+    let title: String
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+            Text(text)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
     }

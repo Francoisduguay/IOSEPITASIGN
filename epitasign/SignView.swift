@@ -207,6 +207,7 @@ struct SignView: View {
                 )
 
                 try await environment.attendanceService.submitSignature(request)
+                environment.markCourseSigned(courseId)
                 flowState = .validated
                 scheduleValidationToast()
                 haptic(.success)
@@ -227,12 +228,6 @@ struct SignView: View {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             await MainActor.run {
                 showsValidationToast = false
-                flowState = .ready
-                enteredCode = ""
-                points.removeAll()
-                signatureDuration = 0
-                signatureStartedAt = nil
-                activeToken = nil
             }
         }
     }
@@ -264,9 +259,38 @@ struct SignView: View {
 }
 
 struct CodeEntryCard: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var code: String
     @Binding var flowState: AttendanceFlowState
     let isWorking: Bool
+
+    private var cardColor: Color {
+        colorScheme == .dark
+            ? Color(red: 0.08, green: 0.15, blue: 0.28)
+            : Color(red: 0.86, green: 0.91, blue: 1.0)
+    }
+
+    private var fieldColor: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.12)
+            : .white
+    }
+
+    private var codeTextColor: Color {
+        colorScheme == .dark ? .white : .black
+    }
+
+    private var badgeColor: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.14)
+            : Color.white.opacity(0.72)
+    }
+
+    private var badgeTextColor: Color {
+        colorScheme == .dark
+            ? Color(red: 0.72, green: 0.82, blue: 1.0)
+            : Color(red: 0.19, green: 0.29, blue: 0.55)
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -287,23 +311,23 @@ struct CodeEntryCard: View {
                 .textFieldStyle(.plain)
                 .font(.headline.monospaced())
                 .multilineTextAlignment(.center)
-                .foregroundColor(.black)
+                .foregroundColor(codeTextColor)
                 .tint(.blue)
                 .padding(.horizontal, 14)
                 .frame(height: 46)
-                .background(.white, in: RoundedRectangle(cornerRadius: 8))
+                .background(fieldColor, in: RoundedRectangle(cornerRadius: 8))
         }
         .foregroundStyle(.primary)
         .padding(16)
         .frame(maxWidth: .infinity)
-        .background(Color(red: 0.86, green: 0.91, blue: 1.0), in: RoundedRectangle(cornerRadius: 8))
+        .background(cardColor, in: RoundedRectangle(cornerRadius: 8))
         .overlay(alignment: .topTrailing) {
             Text(flowState.shortLabel)
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Color(red: 0.19, green: 0.29, blue: 0.55))
+                .foregroundStyle(badgeTextColor)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(.white.opacity(0.72), in: Capsule())
+                .background(badgeColor, in: Capsule())
                 .padding(14)
         }
     }

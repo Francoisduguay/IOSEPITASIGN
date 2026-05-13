@@ -240,14 +240,14 @@ enum StudentSignatureStatus {
     var label: String {
         switch self {
         case .signed: "Signe"
-        case .pending: "A signer"
+        case .pending: "Absent"
         }
     }
 
     var color: Color {
         switch self {
         case .signed: .green
-        case .pending: .orange
+        case .pending: .red
         }
     }
 
