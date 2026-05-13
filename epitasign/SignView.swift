@@ -39,7 +39,7 @@ struct SignView: View {
                         points: $points,
                         startedAt: $signatureStartedAt,
                         duration: $signatureDuration,
-                        isEnabled: true
+                        isEnabled: flowState != .validated
                     )
 
                     SignatureRules(metrics: metrics)
@@ -366,7 +366,7 @@ struct SignaturePanel: View {
                         .frame(width: 38, height: 38)
                 }
                 .buttonStyle(IconButtonStyle())
-                .disabled(points.isEmpty)
+                .disabled(points.isEmpty || !isEnabled)
             }
 
             ZStack {
