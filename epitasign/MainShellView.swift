@@ -57,13 +57,13 @@ struct BottomPager: View {
     private var items: [PagerItem] {
         if isTeacher {
             return [
-                PagerItem(title: "Cours", icon: "calendar"),
+                PagerItem(title: "Emploi du temps", icon: "calendar"),
                 PagerItem(title: "Parametres", icon: "gearshape.fill")
             ]
         }
 
         return [
-            PagerItem(title: "Cours", icon: "calendar"),
+            PagerItem(title: "Emploi du temps", icon: "calendar"),
             PagerItem(title: "Signer", icon: "signature"),
             PagerItem(title: "Historique", icon: "clock.arrow.circlepath"),
             PagerItem(title: "Parametres", icon: "gearshape.fill")
