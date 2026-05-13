@@ -372,7 +372,7 @@ struct TeacherAttendanceView: View {
                             Button(role: .destructive) {
                                 markPending(studentId: student.id)
                             } label: {
-                                Text("Defaire")
+                                Text("Retirer la presence")
                                     .font(.caption.weight(.bold))
                             }
                             .buttonStyle(.bordered)

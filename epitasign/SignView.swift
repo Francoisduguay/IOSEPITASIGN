@@ -17,6 +17,7 @@ struct SignView: View {
     @State private var enteredCode = ""
     @State private var isWorking = false
     @State private var showsValidationToast = false
+    @State private var validationToastTask: Task<Void, Never>?
 
     private var metrics: SignatureMetrics {
         SignatureMetrics(points: points, duration: signatureDuration)
@@ -65,17 +66,21 @@ struct SignView: View {
                 Spacer(minLength: 90)
             }
         } bottomAction: {
-            Button {
-                validateSignature()
-            } label: {
-                Label(actionTitle, systemImage: actionIcon)
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 58)
+            if flowState == .validated && !showsValidationToast {
+                EmptyView()
+            } else {
+                Button {
+                    validateSignature()
+                } label: {
+                    Label(actionTitle, systemImage: actionIcon)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 58)
+                }
+                .buttonStyle(PrimaryButtonStyle(tint: actionTint))
+                .disabled(!canTapMainAction)
+                .opacity(canTapMainAction ? 1 : 0.45)
             }
-            .buttonStyle(PrimaryButtonStyle(tint: actionTint))
-            .disabled(!canTapMainAction)
-            .opacity(canTapMainAction ? 1 : 0.45)
         }
         .onChange(of: points.count) {
             if flowState == .tokenReady {
@@ -140,6 +145,8 @@ struct SignView: View {
         signatureDuration = 0
         signatureStartedAt = nil
         activeToken = nil
+        showsValidationToast = false
+        validationToastTask?.cancel()
         backendError = nil
 
         guard let courseId = activeCourse?.id else {
@@ -222,12 +229,15 @@ struct SignView: View {
     }
 
     private func scheduleValidationToast() {
+        validationToastTask?.cancel()
         showsValidationToast = true
 
-        Task {
+        validationToastTask = Task {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
             await MainActor.run {
                 showsValidationToast = false
+                validationToastTask = nil
             }
         }
     }

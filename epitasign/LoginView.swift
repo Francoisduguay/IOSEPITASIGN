@@ -12,6 +12,7 @@ struct LoginView: View {
     @State private var acceptedTerms = false
     @State private var errorMessage: String?
     @State private var isWorking = false
+    @State private var showsPrivacyPolicy = false
     let onLogin: (AuthUser) -> Void
 
     var body: some View {
@@ -49,10 +50,14 @@ struct LoginView: View {
                     .padding(14)
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
 
-                    Link(destination: URL(string: "https://www.epita.fr/politique-de-confidentialite/")!) {
+                    Button {
+                        showsPrivacyPolicy = true
+                    } label: {
                         Label("Lire les conditions RGPD", systemImage: "doc.text.magnifyingglass")
                             .font(.footnote.weight(.semibold))
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.appBlue)
 
                     if let errorMessage {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
@@ -77,6 +82,9 @@ struct LoginView: View {
                 .padding(.bottom, 18)
             }
             .padding(22)
+        }
+        .sheet(isPresented: $showsPrivacyPolicy) {
+            PrivacyPolicyView()
         }
     }
 
