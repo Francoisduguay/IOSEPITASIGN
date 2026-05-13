@@ -38,7 +38,7 @@ struct MainShellView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .onChange(of: isTeacher) { _ in
+            .onChange(of: isTeacher) {
                 selectedPage = 0
             }
 
@@ -99,6 +99,6 @@ struct BottomPager: View {
     }
 
     private func activeColor(_ index: Int) -> Color {
-        !isTeacher && index == 1 ? flowState.statusColor : .appBlue
+        !isTeacher && index == 1 ? flowState.statusColor : Color.appBlue
     }
 }

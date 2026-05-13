@@ -96,7 +96,7 @@ struct SettingToggle: View {
                 .font(.headline)
                 .frame(width: 42, height: 42)
                 .background(Color.appBlue.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
-                .foregroundStyle(.appBlue)
+                .foregroundStyle(Color.appBlue)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
