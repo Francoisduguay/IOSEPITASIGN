@@ -27,8 +27,8 @@ struct SettingsView: View {
                 } label: {
                     SettingsLinkRow(
                         icon: "lock.shield.fill",
-                        title: "Confidentialite / RGPD",
-                        subtitle: "Donnees collectees et droits utilisateur"
+                        title: "Conditions RGPD",
+                        subtitle: "Confidentialite et traitement des donnees"
                     )
                 }
                 .buttonStyle(.plain)
@@ -171,6 +171,10 @@ struct PrivacyPolicyView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     PrivacySection(
+                        title: "Conditions RGPD EpitaSign",
+                        text: "Cette page explique comment EpitaSign traite les donnees personnelles dans le cadre de la gestion des presences aux cours."
+                    )
+                    PrivacySection(
                         title: "Donnees collectees",
                         text: "EpitaSign utilise les donnees necessaires au suivi de presence: adresse email, role, cours, statut de presence et signature associee a un cours."
                     )
@@ -190,10 +194,14 @@ struct PrivacyPolicyView: View {
                         title: "Securite",
                         text: "Les signatures et informations de presence sont limitees aux personnes autorisees: l'etudiant concerne, les enseignants et les administrateurs habilites."
                     )
+                    PrivacySection(
+                        title: "Contact",
+                        text: "Pour toute demande RGPD, contacte l'administrateur EpitaSign ou le responsable pedagogique de ton etablissement."
+                    )
                 }
                 .padding(20)
             }
-            .navigationTitle("Confidentialite")
+            .navigationTitle("Conditions RGPD")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
